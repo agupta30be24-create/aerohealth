@@ -30,11 +30,24 @@ aerohealth/
 ```
 
 ## Setup
+Requires Python 3.13.
+
+**With conda:**
 ```
 git clone https://github.com/agupta30be24-create/aerohealth.git
 cd aerohealth
 conda create -n aerohealth python=3.13 -y
 conda activate aerohealth
+pip install -r requirements.txt
+mkdir data\raw data\processed
+```
+
+**With venv (e.g. VS Code):**
+```
+git clone https://github.com/agupta30be24-create/aerohealth.git
+cd aerohealth
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 mkdir data\raw data\processed
 ```
