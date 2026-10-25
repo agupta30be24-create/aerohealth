@@ -61,14 +61,30 @@ Copy the C-MAPSS files into `data/raw/`, then run `notebooks/01_eda.ipynb`. It c
 - Sliding windows of 30 cycles
 - Test: one window per engine (its last 30 cycles)
 
+
+## Results (FD001, single seed, preliminary)
+
+| Model | Val RMSE | Test RMSE | Test NASA score | Train time (s) |
+|---|---|---|---|---|
+| Random Forest | 12.88 | 14.11 | 311.0 | 59 |
+| XGBoost | 12.56 | 13.72 | 288.6 | 8 |
+| LSTM | 11.92 | 15.35 | 423.4 | 224 |
+| GRU | 11.59 | 14.88 | 365.7 | 255 |
+| 1D-CNN | 11.98 | 14.56 | 344.9 | 51 |
+
+Test RMSE and NASA score use the true (uncapped) RUL of the 100 test engines. Lower is better.
+Test has only 100 points and one seed was used, so differences of about 1 RMSE are within noise. No ranking is claimed yet.
+
 ## Status
 - [x] Environment setup
 - [x] EDA and preprocessing (FD001)
-- [ ] Baselines: Random Forest, XGBoost
-- [ ] Deep models: LSTM, GRU, 1D-CNN
+- [x] Baselines: Random Forest, XGBoost
+- [x] Deep models: LSTM, GRU, 1D-CNN
+- [ ] Multiple seeds for the deep models
 - [ ] SHAP explainability
 - [ ] Streamlit dashboard
 - [ ] FD002 to FD004
 
 ## Authors
 - agupta30be24-create
+- chintansood
