@@ -9,6 +9,7 @@ NASA C-MAPSS turbofan engine degradation simulation (FD001 to FD004).
 Download: https://www.kaggle.com/datasets/palbha/cmapss-jet-engine-simulated-data
 
 The raw data is not stored in this repo. Place the `.txt` files in `data/raw/`.
+Reference: A. Saxena, K. Goebel, D. Simon, N. Eklund, "Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation", PHM 2008.
 
 ## Pipeline
 Sensor data, then preprocessing, then sliding windows, then model, then RUL, then failure risk, then SHAP explanation.
@@ -60,6 +61,11 @@ Copy the C-MAPSS files into `data/raw/`, then run `notebooks/01_eda.ipynb`. It c
 - MinMax scaling fitted on training engines only
 - Sliding windows of 30 cycles
 - Test: one window per engine (its last 30 cycles)
+## Models
+- **Random Forest and XGBoost** use 90 summary features per window (last value, mean, std, min, max and slope of each of the 15 sensors), because trees cannot read sequences.
+- **LSTM, GRU and 1D-CNN** read the raw 30 x 15 window. They use Adam (lr 1e-3), batch size 256, gradient clipping and early stopping on validation RMSE.
+- **Deep models are trained on RUL / 125** and the output is multiplied back. Without this the LSTM got stuck predicting the average (validation RMSE about 41.7) and learned nothing. Do not remove the scaling.
+- No hyperparameter tuning has been done yet.
 
 
 ## Results (FD001, single seed, preliminary)
@@ -72,7 +78,10 @@ Copy the C-MAPSS files into `data/raw/`, then run `notebooks/01_eda.ipynb`. It c
 | GRU | 11.59 | 14.88 | 365.7 | 255 |
 | 1D-CNN | 11.98 | 14.56 | 344.9 | 51 |
 
-Test RMSE and NASA score use the true (uncapped) RUL of the 100 test engines. Lower is better.
+Test RMSE and NASA score use the true (uncapped) RUL of the 100 test engines. Validation RMSE is on capped labels. Lower is better.
+
+The deep models have the best validation RMSE but the worst test RMSE. Their validation RMSE is the best epoch picked on the validation set, so it is optimistically biased (the tree models are evaluated once). Validation also covers every window of 20 engines, while test is one final window per engine. Compare models on test, not validation.
+
 Test has only 100 points and one seed was used, so differences of about 1 RMSE are within noise. No ranking is claimed yet.
 
 ## Status
