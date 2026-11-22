@@ -42,7 +42,8 @@ aerohealth/
 │   ├── deep.py               # 1D-CNN + training loop (same as 03)
 │   ├── run_cnn_all.py        # CNN on all datasets, run as a separate process (see Notes)
 │   └── export_frontend.py    # exports results to web/data/*.json for the 3D frontend
-├── app/dashboard.py          # Streamlit dashboard
+├── app/dashboard.py          # Streamlit dashboard (benchmark fleet + upload your own data)
+├── examples/                 # example upload files (real NASA test engines)
 ├── web/                      # Three.js 3D frontend (index.html, main.js, data/*.json, vendor/three)
 ├── results/                  # metric tables (.csv) and plots (.png)
 └── requirements.txt          # pinned versions
@@ -155,7 +156,26 @@ SHAP TreeExplainer on XGBoost (exact for tree models, so base value + SHAP value
 - SHAP explains what the model uses, not physical causation. Correlated sensors can share importance.
 
 ## Dashboard (`app/dashboard.py`)
-Dataset selector (FD001-FD004). Fleet overview (HIGH/MEDIUM/LOW counts and an engine table sorted by risk), engine detail (risk, probability, plain-English SHAP reasons, waterfall plot, sensor history), and a method/limitations tab. H and the probability cut-off can be changed live. True RUL is hidden unless "evaluation mode" is on, because it is unknown in real operation.
+```
+streamlit run app/dashboard.py        # then open http://localhost:8501
+```
+Two modes (sidebar → **Data → Source**):
+
+**1. NASA test fleet (benchmark).** Dataset selector (FD001-FD004). Fleet overview (HIGH/MEDIUM/LOW counts and an engine table sorted by risk), engine detail (risk, probability, plain-English SHAP reasons, waterfall plot, sensor history), and a method/limitations tab. H and the probability cut-off can be changed live. True RUL is hidden unless "evaluation mode" is on, because it is unknown in real operation.
+
+**2. Upload your own engine data.** Upload a sensor file and get the same predictions, risk levels and explanations for your engines, plus a CSV download.
+- **Format:** one row per engine per cycle, 26 numeric columns `engine, cycle, op1, op2, op3, s1 … s21` (C-MAPSS format). NASA's space-separated `.txt` files work as-is. CSV with or without a header also works (`unit`/`time` are accepted for `engine`/`cycle`). Examples: `examples/sample_engines_1condition.csv` and `examples/sample_engines_6conditions.csv` (real NASA test engines), also selectable in the app.
+- **Nothing is fitted on uploaded data.** It is transformed with the regime clustering, sensor list and scalers learned from the training engines (`src/aerohealth.py: Preprocessor`), then passed to the trained model. Tested: uploading NASA's `test_FD00x.txt` gives **exactly** the benchmark windows and predictions on all four datasets.
+- **Model choice:** flight conditions are detected from the operating settings, so the app suggests a one- or six-condition model. The fault type cannot be detected, so it suggests the model trained on both fault types (FD003 or FD004). The user can override it.
+- **Data checks per engine** (thresholds measured on the training data):
+
+| Check | Rule | Why this threshold |
+|---|---|---|
+| Unknown flight condition | operating settings > 0.1 (common scale) from every condition seen in training | Training noise is ≤ 0.005 and the two closest real conditions are 0.475 apart, so 0.1 cannot be triggered by noise but catches any unseen condition. Six-condition data through a one-condition model: 85% of rows flagged. Correct-model data: 0% |
+| Outside training range | scaled sensor value < −0.1 or > 1.1 | More than 10% of the training range beyond it. On NASA's own test data this flags only the known FD004 s6 quirk |
+| Short history | fewer than 30 cycles | Window padded by repeating the first cycle. Notebook 06 shows these engines have clearly higher error |
+
+- Bad files (wrong column count, non-numeric values, duplicate engine/cycle pairs) are rejected with a message saying what is wrong.
 
 ## 3D frontend (`web/`, Three.js)
 A 3D view of the same results:
@@ -187,6 +207,7 @@ Prepared views via URL, e.g. `http://localhost:8765/?fd=FD004&eval=1&engine=10&c
 - [x] Streamlit dashboard
 - [x] FD002 to FD004 (XGBoost + 1D-CNN)
 - [x] 3D frontend (Three.js)
+- [x] Upload your own engine data (dashboard)
 
 Possible extensions: hyperparameter tuning, LSTM/GRU on FD002-FD004, a bootstrap over test engines for model comparisons.
 
