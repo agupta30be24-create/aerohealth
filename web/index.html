@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AeroHealth 3D</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+  </script>
+</head>
+<body>
+  <header>
+    <div class="brand">AeroHealth <span>3D</span></div>
+    <label>Dataset
+      <select id="dataset">
+        <option value="FD001">FD001: 1 condition, HPC fault</option>
+        <option value="FD002">FD002: 6 conditions, HPC fault</option>
+        <option value="FD003">FD003: 1 condition, HPC + fan faults</option>
+        <option value="FD004">FD004: 6 conditions, HPC + fan faults</option>
+      </select>
+    </label>
+    <label class="toggle"><input type="checkbox" id="evalMode" /> Evaluation mode (show true RUL)</label>
+    <div id="summary" class="summary"></div>
+  </header>
+
+  <main>
+    <section id="fleetPane" class="pane">
+      <div class="pane-title">Fleet <small>(colour = risk level, height = P(fail within H), hover for details, click to select)</small></div>
+      <div id="fleetView" class="view"></div>
+      <div id="tooltip" class="tooltip hidden"></div>
+      <div class="legend">
+        <span><i class="dot high"></i>HIGH: act now</span>
+        <span><i class="dot medium"></i>MEDIUM: plan maintenance</span>
+        <span><i class="dot low"></i>LOW</span>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="pane engine-pane">
+        <div class="pane-title">Engine <span id="engineTitle"></span> <small>(component colour = SHAP: red shortens life, blue extends it, click a component)</small></div>
+        <div id="engineView" class="view"></div>
+        <div class="scale"><span>shortens life</span><div class="bar"></div><span>extends life</span></div>
+      </div>
+      <div id="info" class="pane info"></div>
+    </section>
+  </main>
+
+  <footer>
+    All numbers are computed in Python (<code>src/export_frontend.py</code>, same code as the Streamlit dashboard): XGBoost RUL,
+    failure probability calibrated on validation engines, SHAP TreeExplainer. Sensor-to-component mapping follows the station names in
+    Saxena et al. (2008), Table 2. It is approximate: core speed and bleed enthalpy are drawn on the HPC.
+  </footer>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
