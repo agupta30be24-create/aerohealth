@@ -167,9 +167,9 @@ All numbers are computed in Python by `src/export_frontend.py` (same code as the
 
 ```
 python src/export_frontend.py          # writes web/data/FD00x.json (already included)
-python -m http.server 8000 -d web      # then open http://localhost:8000
+python -m http.server 8765 -d web      # then open http://localhost:8765 (any free port works)
 ```
-Prepared views via URL, e.g. `http://localhost:8000/?fd=FD004&eval=1&engine=10&comp=hpc`. Three.js 0.187.0 is included in `web/vendor/` (MIT licence) so it works offline.
+Prepared views via URL, e.g. `http://localhost:8765/?fd=FD004&eval=1&engine=10&comp=hpc`. Three.js 0.187.0 is included in `web/vendor/` (MIT licence) so it works offline.
 
 ## Notes
 - **macOS: do not train XGBoost and PyTorch in the same Python process.** Each bundles its own OpenMP runtime, and the combination segfaults. That is why `06` runs the CNN through `src/run_cnn_all.py` as a separate process (02/03 are already separate).
