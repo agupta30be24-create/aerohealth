@@ -10,47 +10,73 @@
   </script>
 </head>
 <body>
-  <header>
-    <div class="brand">AeroHealth <span>3D</span></div>
-    <label>Dataset
-      <select id="dataset">
+  <div id="stage"></div>
+
+  <!-- top bar -->
+  <header class="glass topbar">
+    <div class="brand"><span class="logo">◎</span> AeroHealth <b>3D</b></div>
+    <nav id="sources" class="tabs">
+      <button data-src="FD001" class="active">FD001</button>
+      <button data-src="FD002">FD002</button>
+      <button data-src="FD003">FD003</button>
+      <button data-src="FD004">FD004</button>
+      <button data-src="upload" class="upload-tab">⇪ My engines</button>
+    </nav>
+    <label class="switch" id="evalWrap" title="True remaining life is unknown in real operation; only the NASA benchmark has it.">
+      <input type="checkbox" id="evalMode" /><span></span> Evaluation mode
+    </label>
+  </header>
+
+  <!-- left: fleet HUD -->
+  <aside id="fleetPanel" class="glass panel left"></aside>
+
+  <!-- right: engine HUD -->
+  <aside id="enginePanel" class="glass panel right"></aside>
+
+  <!-- bottom: view controls + colour scale -->
+  <footer class="glass bottombar">
+    <div class="views">
+      <button id="btnFleet" class="active">◉ Fleet radar</button>
+      <button id="btnInspect">⌖ Inspect engine</button>
+      <button id="btnExplode">⇹ Exploded view</button>
+    </div>
+    <div class="scale"><span>shortens life</span><i></i><span>extends life</span></div>
+    <div class="hint">drag to orbit · scroll to zoom · click an engine</div>
+  </footer>
+
+  <!-- upload panel -->
+  <section id="uploadPanel" class="glass upload hidden">
+    <button class="close" id="uploadClose" title="close">×</button>
+    <h2>Analyse your own engines</h2>
+    <p class="muted">Drop a sensor file anywhere on the page, or choose one. One row per engine per cycle:
+      <code>engine, cycle, op1, op2, op3, s1 … s21</code> (C-MAPSS format, NASA <code>.txt</code> or <code>.csv</code>).</p>
+    <label class="drop" id="dropzone">
+      <input type="file" id="fileInput" accept=".txt,.csv,.tsv" hidden />
+      <div class="drop-icon">⇪</div>
+      <div><b>Choose a file</b> or drag it here</div>
+    </label>
+    <div class="examples">
+      <span class="muted">or try a real NASA example:</span>
+      <button data-example="sample_engines_1condition.csv">5 engines · 1 flight condition</button>
+      <button data-example="sample_engines_6conditions.csv">5 engines · 6 flight conditions</button>
+    </div>
+    <label class="model">Trained model
+      <select id="modelSelect">
+        <option value="auto">Auto (suggested from your data)</option>
         <option value="FD001">FD001: 1 condition, HPC fault</option>
         <option value="FD002">FD002: 6 conditions, HPC fault</option>
         <option value="FD003">FD003: 1 condition, HPC + fan faults</option>
         <option value="FD004">FD004: 6 conditions, HPC + fan faults</option>
       </select>
     </label>
-    <label class="toggle"><input type="checkbox" id="evalMode" /> Evaluation mode (show true RUL)</label>
-    <div id="summary" class="summary"></div>
-  </header>
+    <div id="uploadStatus"></div>
+    <p class="muted small">Your file is processed on this computer by <code>app/server.py</code>. Nothing is fitted on it:
+      it is transformed with what was learned from the training engines, then passed to the trained model.</p>
+  </section>
 
-  <main>
-    <section id="fleetPane" class="pane">
-      <div class="pane-title">Fleet <small>(colour = risk level, height = P(fail within H), hover for details, click to select)</small></div>
-      <div id="fleetView" class="view"></div>
-      <div id="tooltip" class="tooltip hidden"></div>
-      <div class="legend">
-        <span><i class="dot high"></i>HIGH: act now</span>
-        <span><i class="dot medium"></i>MEDIUM: plan maintenance</span>
-        <span><i class="dot low"></i>LOW</span>
-      </div>
-    </section>
-
-    <section class="right">
-      <div class="pane engine-pane">
-        <div class="pane-title">Engine <span id="engineTitle"></span> <small>(component colour = SHAP: red shortens life, blue extends it, click a component)</small></div>
-        <div id="engineView" class="view"></div>
-        <div class="scale"><span>shortens life</span><div class="bar"></div><span>extends life</span></div>
-      </div>
-      <div id="info" class="pane info"></div>
-    </section>
-  </main>
-
-  <footer>
-    All numbers are computed in Python (<code>src/export_frontend.py</code>, same code as the Streamlit dashboard): XGBoost RUL,
-    failure probability calibrated on validation engines, SHAP TreeExplainer. Sensor-to-component mapping follows the station names in
-    Saxena et al. (2008), Table 2. It is approximate: core speed and bleed enthalpy are drawn on the HPC.
-  </footer>
+  <div id="dropOverlay" class="drop-overlay hidden"><div>Drop your engine sensor file</div></div>
+  <div id="tooltip" class="tooltip hidden"></div>
+  <div id="loader" class="loader"><div class="spinner"></div><div id="loaderText">Starting engines…</div></div>
 
   <script type="module" src="main.js"></script>
 </body>

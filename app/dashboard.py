@@ -184,7 +184,7 @@ with fleet:
     if eval_mode:
         table["true RUL"] = V["y_true"].astype(int)
     table = table.sort_values(f"P(fail ≤ {H})", ascending=False)
-    st.dataframe(table.style.map(lambda v: f"background-color: {LEVEL_COLOUR[v]}", subset=["risk"])
+    st.dataframe(table.style.map(lambda v: f"background-color: {LEVEL_COLOUR[v]}; color: #111; font-weight: 600", subset=["risk"])
                  .format({f"P(fail ≤ {H})": "{:.2f}", f"P(fail ≤ {2*H})": "{:.2f}", "predicted RUL": "{:.1f}"}),
                  hide_index=True, width="stretch", height=min(420, 38 + 35 * n_eng))
     if V["padded"]:

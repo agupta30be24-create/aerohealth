@@ -43,6 +43,7 @@ aerohealth/
 │   ├── run_cnn_all.py        # CNN on all datasets, run as a separate process (see Notes)
 │   └── export_frontend.py    # exports results to web/data/*.json for the 3D frontend
 ├── app/dashboard.py          # Streamlit dashboard (benchmark fleet + upload your own data)
+├── app/server.py             # 3D frontend server: serves web/ and analyses uploads (stdlib only)
 ├── examples/                 # example upload files (real NASA test engines)
 ├── web/                      # Three.js 3D frontend (index.html, main.js, data/*.json, vendor/three)
 ├── results/                  # metric tables (.csv) and plots (.png)
@@ -186,10 +187,14 @@ A 3D view of the same results:
 All numbers are computed in Python by `src/export_frontend.py` (same code as the Streamlit dashboard). The frontend only displays them. Sensor-to-component mapping follows the station names in Saxena et al. (2008), Table 2. It is approximate: core speed (Nc, NRc) and bleed enthalpy are drawn on the HPC, although the core shaft also drives the HPT. Component totals grow with the number of sensors assigned, so compare individual sensors before concluding that one component dominates.
 
 ```
-python src/export_frontend.py          # writes web/data/FD00x.json (already included)
-python -m http.server 8765 -d web      # then open http://localhost:8765 (any free port works)
+python app/server.py                   # then open http://localhost:8765  (--port to change)
 ```
-Prepared views via URL, e.g. `http://localhost:8765/?fd=FD004&eval=1&engine=10&comp=hpc`. Three.js 0.187.0 is included in `web/vendor/` (MIT licence) so it works offline.
+`app/server.py` (Python standard library only, localhost only) serves the page **and analyses uploads**: drop a sensor file anywhere on the page, or use **⇪ My engines**. Uploads go through the same `build_payload()` as the NASA fleets (and the same Preprocessor and trained model as the dashboard), so uploading NASA's `test_FD001.txt` returns exactly the benchmark results. The NASA fleets alone also work from any static server (`python -m http.server 8765 -d web`), but uploads need `app/server.py`.
+
+Design: **radar radius = predicted remaining life**, with glowing rings at the derived HIGH/MEDIUM cut-offs. HIGH engines pulse. The hero engine's parts glow by SHAP contribution. Fly-to "Inspect engine" and "Exploded view". The airflow particles are decorative.
+`python src/export_frontend.py` regenerates `web/data/FD00x.json`.
+
+Prepared views via URL: `?fd=FD004&eval=1&engine=10&comp=hpc`, `?engine=85&exploded=1`, `?example=sample_engines_6conditions.csv`. Three.js 0.187.0 (core, OrbitControls, CSS2DRenderer, bloom post-processing) is included in `web/vendor/` (MIT licence) so it works offline.
 
 ## Notes
 - **macOS: do not train XGBoost and PyTorch in the same Python process.** Each bundles its own OpenMP runtime, and the combination segfaults. That is why `06` runs the CNN through `src/run_cnn_all.py` as a separate process (02/03 are already separate).
