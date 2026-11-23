@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AeroHealth 3D</title>
+  <title>AeroHealth</title>
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
@@ -14,13 +14,13 @@
 
   <!-- top bar -->
   <header class="glass topbar">
-    <div class="brand"><span class="logo">◎</span> AeroHealth <b>3D</b></div>
+    <div class="brand">AeroHealth <b>Engine remaining-life monitor</b></div>
     <nav id="sources" class="tabs">
       <button data-src="FD001" class="active">FD001</button>
       <button data-src="FD002">FD002</button>
       <button data-src="FD003">FD003</button>
       <button data-src="FD004">FD004</button>
-      <button data-src="upload" class="upload-tab">⇪ My engines</button>
+      <button data-src="upload" class="upload-tab">Upload engine data</button>
     </nav>
     <label class="switch" id="evalWrap" title="True remaining life is unknown in real operation; only the NASA benchmark has it.">
       <input type="checkbox" id="evalMode" /><span></span> Evaluation mode
@@ -36,9 +36,9 @@
   <!-- bottom: view controls + colour scale -->
   <footer class="glass bottombar">
     <div class="views">
-      <button id="btnFleet" class="active">◉ Fleet radar</button>
-      <button id="btnInspect">⌖ Inspect engine</button>
-      <button id="btnExplode">⇹ Exploded view</button>
+      <button id="btnFleet" class="active">Fleet</button>
+      <button id="btnInspect">Inspect engine</button>
+      <button id="btnExplode">Exploded view</button>
     </div>
     <div class="scale"><span>shortens life</span><i></i><span>extends life</span></div>
     <div class="hint">drag to orbit · scroll to zoom · click an engine</div>
@@ -76,7 +76,7 @@
 
   <div id="dropOverlay" class="drop-overlay hidden"><div>Drop your engine sensor file</div></div>
   <div id="tooltip" class="tooltip hidden"></div>
-  <div id="loader" class="loader"><div class="spinner"></div><div id="loaderText">Starting engines…</div></div>
+  <div id="loader" class="loader"><div class="spinner"></div><div id="loaderText">Loading…</div></div>
 
   <script type="module" src="main.js"></script>
 </body>

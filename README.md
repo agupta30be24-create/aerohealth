@@ -179,22 +179,20 @@ Two modes (sidebar → **Data → Source**):
 - Bad files (wrong column count, non-numeric values, duplicate engine/cycle pairs) are rejected with a message saying what is wrong.
 
 ## 3D frontend (`web/`, Three.js)
-A 3D view of the same results:
-- **Fleet:** one engine per tile, coloured by risk level and raised by P(fail within 30). Hover for details, click to select.
-- **Engine cutaway:** a turbofan (fan → LPC → HPC → combustor → HPT → LPT) where each component is coloured by the **sum of the SHAP values of the sensors located there** (red shortens predicted life, blue extends it). Click a component for its per-sensor breakdown.
-- An on-screen **integrity check** shows that fleet average + component contributions = the model's prediction (SHAP values add up exactly).
-
-All numbers are computed in Python by `src/export_frontend.py` (same code as the Streamlit dashboard). The frontend only displays them. Sensor-to-component mapping follows the station names in Saxena et al. (2008), Table 2. It is approximate: core speed (Nc, NRc) and bleed enthalpy are drawn on the HPC, although the core shaft also drives the HPT. Component totals grow with the number of sensors assigned, so compare individual sensors before concluding that one component dominates.
-
 ```
 python app/server.py                   # then open http://localhost:8765  (--port to change)
 ```
-`app/server.py` (Python standard library only, localhost only) serves the page **and analyses uploads**: drop a sensor file anywhere on the page, or use **⇪ My engines**. Uploads go through the same `build_payload()` as the NASA fleets (and the same Preprocessor and trained model as the dashboard), so uploading NASA's `test_FD001.txt` returns exactly the benchmark results. The NASA fleets alone also work from any static server (`python -m http.server 8765 -d web`), but uploads need `app/server.py`.
+A 3D view of the same results, styled like an engineering viewer (matte materials, soft shadows, no animation except a slowly turning fan):
+- **Fleet chart:** each engine is placed on a polar chart where **distance from the centre = predicted remaining life**. Dashed rings mark the derived HIGH/MEDIUM cut-offs. Colour = risk level. Hover for details, click to select.
+- **Engine model:** a turbofan (fan → LPC → HPC → combustor → HPT → LPT) where each part is tinted in proportion to the **sum of the SHAP values of the sensors located there** (red shortens predicted life, blue extends it, steel grey = little effect). "Inspect engine" moves the camera to it, "Exploded view" separates the parts. Click a part for its per-sensor breakdown.
+- An on-screen **check** shows that model average + part contributions = the model's prediction (SHAP values add up exactly).
+- **Upload engine data:** drop a sensor file anywhere on the page. Suggested model, data warnings and CSV download as in the dashboard.
 
-Design: **radar radius = predicted remaining life**, with glowing rings at the derived HIGH/MEDIUM cut-offs. HIGH engines pulse. The hero engine's parts glow by SHAP contribution. Fly-to "Inspect engine" and "Exploded view". The airflow particles are decorative.
-`python src/export_frontend.py` regenerates `web/data/FD00x.json`.
+`app/server.py` (Python standard library only, localhost only) serves the page **and analyses uploads**. Uploads go through the same `build_payload()` as the NASA fleets (and the same Preprocessor and trained model as the dashboard), so uploading NASA's `test_FD001.txt` returns exactly the benchmark results. The NASA fleets alone also work from any static server (`python -m http.server 8765 -d web`), but uploads need `app/server.py`. `python src/export_frontend.py` regenerates `web/data/FD00x.json`.
 
-Prepared views via URL: `?fd=FD004&eval=1&engine=10&comp=hpc`, `?engine=85&exploded=1`, `?example=sample_engines_6conditions.csv`. Three.js 0.187.0 (core, OrbitControls, CSS2DRenderer, bloom post-processing) is included in `web/vendor/` (MIT licence) so it works offline.
+All numbers are computed in Python; the frontend only displays them. Sensor-to-part mapping follows the station names in Saxena et al. (2008), Table 2. It is approximate: core speed (Nc, NRc) and bleed enthalpy are drawn on the HPC, although the core shaft also drives the HPT. Part totals grow with the number of sensors assigned, so compare individual sensors before concluding that one part dominates.
+
+Prepared views via URL: `?fd=FD004&eval=1&engine=10&comp=hpc`, `?engine=85&exploded=1`, `?example=sample_engines_6conditions.csv`. Three.js 0.187.0 (core, OrbitControls, CSS2DRenderer) is included in `web/vendor/` (MIT licence) so it works offline.
 
 ## Notes
 - **macOS: do not train XGBoost and PyTorch in the same Python process.** Each bundles its own OpenMP runtime, and the combination segfaults. That is why `06` runs the CNN through `src/run_cnn_all.py` as a separate process (02/03 are already separate).
