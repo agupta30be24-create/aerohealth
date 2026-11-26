@@ -3,3 +3,7 @@ __pycache__/
 *.pkl
 *.pt
 venv/
+# Large generated windows (FD004 ~111 MB > GitHub 100 MB limit). Rebuild with src/aerohealth.py prepare()
+data/processed/fd00[234]_windows.npz
+data/*.zip
+.DS_Store
