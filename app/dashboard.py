@@ -189,7 +189,7 @@ with fleet:
                  hide_index=True, width="stretch", height=min(420, 38 + 35 * n_eng))
     if V["padded"]:
         st.caption(f"{len(V['padded'])} engine(s) have fewer than 30 recorded cycles. Their window is padded by "
-                   "repeating the first cycle, so their predictions are less informed (notebook 06 shows clearly higher error).")
+                   "repeating the first cycle, so their predictions are less informed.")
     if uploading:
         out = table.copy()
         out.insert(2, "H", H)
@@ -307,6 +307,6 @@ outlet). Fan faults show in fan speed (Nf, NRf) and bypass ratio (BPR).
 **Limitations**
 - Predictions are only as good as the match between your engines and the training fleet (simulated C-MAPSS turbofans).
 - Calibration is fitted on windows from a small number of validation engines.
-- One model (XGBoost) and seed in this dashboard. Notebook 06 reports several seeds and a 1D-CNN.
+- One model (XGBoost) and seed in this dashboard. Notebooks 02 and 03 compare five models over five seeds on FD001.
 - SHAP explains what the **model** uses, not physical causation. Correlated sensors can share credit.
 """)

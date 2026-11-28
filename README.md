@@ -5,7 +5,7 @@
 Predicts how many flight cycles a turbofan engine has left before failure from multivariate sensor time series, converts that into a calibrated failure risk, and explains each prediction with SHAP.
 
 ## Dataset
-NASA C-MAPSS turbofan engine degradation simulation (FD001 to FD004).
+NASA C-MAPSS turbofan engine degradation simulation. This project trains and evaluates on **FD001** (one flight condition, one fault mode). The dashboard and 3D viewer can also load FD002 to FD004 using the same preprocessing, but those datasets are not evaluated here.
 Download: https://www.kaggle.com/datasets/palbha/cmapss-jet-engine-simulated-data
 
 The raw `.txt` files are included in `data/raw/`. If you download them yourself, place them there.
@@ -35,12 +35,9 @@ aerohealth/
 │   ├── 02_baselines.ipynb    # Random Forest, XGBoost (5 seeds)
 │   ├── 03_deep_models.ipynb  # LSTM, GRU, 1D-CNN (5 seeds)
 │   ├── 04_shap.ipynb         # SHAP explanations for XGBoost (FD001)
-│   ├── 05_failure_risk.ipynb # RUL -> calibrated failure probability -> risk level (FD001)
-│   └── 06_all_datasets.ipynb # whole pipeline on FD001-FD004
+│   └── 05_failure_risk.ipynb # RUL -> calibrated failure probability -> risk level (FD001)
 ├── src/
 │   ├── aerohealth.py         # shared pipeline code: prepare(), features, XGBoost, calibration, risk levels
-│   ├── deep.py               # 1D-CNN + training loop (same as 03)
-│   ├── run_cnn_all.py        # CNN on all datasets, run as a separate process (see Notes)
 │   └── export_frontend.py    # exports results to web/data/*.json for the 3D frontend
 ├── app/dashboard.py          # Streamlit dashboard (benchmark fleet + upload your own data)
 ├── app/server.py             # 3D frontend server: serves web/ and analyses uploads (stdlib only)
@@ -73,7 +70,7 @@ pip install -r requirements.txt
 (macOS/Linux venv: `source venv/bin/activate`.)
 
 ## How to reproduce
-Run the notebooks in order from the `notebooks/` folder: 01 → 06. 01 builds `fd001_windows.npz`. 06 builds the FD002-FD004 windows itself if they are missing (they are not tracked because `fd004_windows.npz` is about 111 MB, over GitHub's 100 MB file limit). To build them by hand:
+Run the notebooks in order from the `notebooks/` folder: 01 → 05. 01 builds `fd001_windows.npz`, which 02 to 05 load. The apps build the FD002-FD004 windows automatically the first time those datasets are opened (they are not tracked because `fd004_windows.npz` is about 111 MB, over GitHub's 100 MB file limit). To build them by hand:
 ```
 cd src
 python -c "import aerohealth as ah; [ah.prepare(fd) for fd in ah.DATASETS]"
@@ -92,16 +89,13 @@ streamlit run app/dashboard.py
 - Sliding windows of 30 cycles
 - Test: one window per engine (its last 30 cycles)
 
-**All datasets** (`src/aerohealth.py: prepare()`): same rules, generalised. For FD001 it reproduces `fd001_windows.npz` **exactly** (checked array by array).
-- **Operating regimes:** k-means on the 3 operating settings. For FD002/FD004 the within-cluster error drops to exactly 0 at k=6 (matching the 6 conditions in the dataset readme), and the regime alone explains about 100% of raw sensor variance. So sensors are **MinMax-scaled within each regime**, otherwise the model would learn the flight condition instead of wear. FD001/FD003 have 1 regime.
-- **Dropped sensors:** zero spread within every regime, decided per dataset (FD003 keeps s10. FD002/FD004 keep 17 sensors).
-- **Short test engines:** 6 (FD002) and 11 (FD004) test engines have fewer than 30 cycles. They are padded by repeating their first cycle so none is dropped, and their error is reported separately.
+**Shared code for the apps** (`src/aerohealth.py: prepare()`): the same rules, written once. For FD001 it reproduces `fd001_windows.npz` **exactly** (checked array by array). For the other datasets the apps can load, it also scales sensors within each flight condition and pads test engines shorter than 30 cycles.
 
 ## Models
 - **Random Forest and XGBoost** use 90 summary features per window (last value, mean, std, min, max and slope of each of the 15 sensors), because trees cannot read sequences.
 - **LSTM, GRU and 1D-CNN** read the raw 30 x 15 window. They use Adam (lr 1e-3), batch size 256, gradient clipping and early stopping on validation RMSE.
 - **Deep models are trained on RUL / 125** and the output is multiplied back. Without this the LSTM got stuck predicting the average (validation RMSE about 41.7) and learned nothing. Do not remove the scaling.
-- No hyperparameter tuning has been done. FD001 settings are reused on every dataset.
+- No hyperparameter tuning has been done.
 
 ## Results
 
@@ -120,16 +114,6 @@ Per-seed results: `results/tree_runs.csv`, `results/deep_runs.csv`. Test RMSE an
 - The deep models have the best validation RMSE but the worst test RMSE. Their validation RMSE is the best epoch picked on the validation set, so it is optimistically biased (the tree models are evaluated once). Validation also covers every window of 20 engines, while test is one final window per engine. Compare models on test, not validation.
 - Seeds measure training randomness only. With 100 test engines, a different test sample could change the gap, so this is a result **on this test set**, not a general claim that trees are better.
 
-### All datasets: XGBoost (5 seeds) and 1D-CNN (3 seeds), test RMSE mean ± std
-| Dataset | XGBoost | 1D-CNN |
-|---|---|---|
-| FD001 | **13.89 ± 0.22** | 14.76 ± 0.34 |
-| FD002 | **26.71 ± 0.17** | 27.63 ± 0.52 |
-| FD003 | **14.20 ± 0.19** | 14.83 ± 0.35 |
-| FD004 | 28.25 ± 0.15 | **27.88 ± 0.78** |
-
-Details: `notebooks/06_all_datasets.ipynb`, `results/all_datasets_summary.csv`. The multi-condition datasets (FD002/FD004) are much harder with this untuned, same-recipe setup. Published methods do better on them, and no state-of-the-art claim is made. On FD004 the CNN's lead is within its seed std (a tie). Padded short engines have clearly higher error (`06`, Section 1).
-
 ## Failure risk (`05_failure_risk`)
 Predicted RUL is converted into **P(true RUL ≤ H)** with a logistic regression fitted on the **validation** engines (the test set is never used for fitting). This corrects the model's bias near failure: about two times in three it predicts **too late** there.
 
@@ -140,20 +124,14 @@ Predicted RUL is converted into **P(true RUL ≤ H)** with a logistic regression
 | LOW | otherwise |
 
 The only chosen numbers are **H = 30** and the cut-off **0.5**. The RUL thresholds are derived (FD001: HIGH if predicted RUL ≤ 31.6).
-- **Why H = 30:** validation recall/precision stay about 0.9 for every H from 15 to 60 (`05`, Section 3), so 30 is feasible but the data does not single it out. It is chosen because it leaves 25 FD001 test engines to evaluate on (only 10 at H = 15), and because H is an operational parameter (warning time maintenance needs). It is exposed at the top of the notebook and in the dashboard.
-- **Why 0.5:** "more likely than not". `05`, Section 5 shows the trade-off (for example, 0.3 raises recall from 0.93 to 0.96 but nearly doubles false alarms).
+- **Why H = 30:** validation recall/precision stay about 0.9 for every H from 15 to 60 (`05`, Extra section), so 30 is feasible but the data does not single it out. It is chosen because it leaves 25 FD001 test engines to evaluate on (only 10 at H = 15), and because H is an operational parameter (warning time maintenance needs). It is exposed at the top of the notebook and in the dashboard.
+- **Why 0.5:** "more likely than not". `05`, Extra section, shows the trade-off (for example, 0.3 raises recall from 0.93 to 0.96 but nearly doubles false alarms).
 
-| Dataset | Truly fail within 30 | Caught by HIGH | HIGH correct | Truly fail within 30 but rated LOW |
-|---|---|---|---|---|
-| FD001 | 25 | 23 | 23/24 | **0** |
-| FD002 | 61 | 61 | 61/68 | **0** |
-| FD003 | 20 | 19 | 19/21 | **0** |
-| FD004 | 53 | 43 | 43/46 | **0** |
+**FD001 test result:** 25 test engines truly fail within 30 cycles. 23 of them are rated HIGH and the other 2 MEDIUM, 23 of the 24 HIGH engines really fail within 30 cycles, and **no failing engine is rated LOW**.
 
-## Explainability (`04_shap`, `06`)
+## Explainability (`04_shap`)
 SHAP TreeExplainer on XGBoost (exact for tree models, so base value + SHAP values = prediction for every engine).
 - **FD001:** the top sensors are **s11 (Ps30)** and **s3 (T30)**, both measured at the **high-pressure compressor (HPC) outlet**, and FD001's only fault mode is HPC degradation. Trends over the window matter most (slope = 43% of importance, latest value only 1%).
-- **Fan-fault check (negative result):** fan-related sensors (Nf, NRf, BPR) do **not** gain importance on FD003/FD004, which add fan degradation. The model relies mainly on HPC sensors everywhere, so we **cannot** claim it detects fan faults specifically.
 - SHAP explains what the model uses, not physical causation. Correlated sensors can share importance.
 
 ## Dashboard (`app/dashboard.py`)
@@ -174,7 +152,7 @@ Two modes (sidebar → **Data → Source**):
 |---|---|---|
 | Unknown flight condition | operating settings > 0.1 (common scale) from every condition seen in training | Training noise is ≤ 0.005 and the two closest real conditions are 0.475 apart, so 0.1 cannot be triggered by noise but catches any unseen condition. Six-condition data through a one-condition model: 85% of rows flagged. Correct-model data: 0% |
 | Outside training range | scaled sensor value < −0.1 or > 1.1 | More than 10% of the training range beyond it. On NASA's own test data this flags only the known FD004 s6 quirk |
-| Short history | fewer than 30 cycles | Window padded by repeating the first cycle. Notebook 06 shows these engines have clearly higher error |
+| Short history | fewer than 30 cycles | Window padded by repeating the first cycle, so it carries less information and the prediction is less reliable |
 
 - Bad files (wrong column count, non-numeric values, duplicate engine/cycle pairs) are rejected with a message saying what is wrong.
 
@@ -195,7 +173,7 @@ All numbers are computed in Python; the frontend only displays them. Sensor-to-p
 Prepared views via URL: `?fd=FD004&eval=1&engine=10&comp=hpc`, `?engine=85&exploded=1`, `?example=sample_engines_6conditions.csv`. Three.js 0.187.0 (core, OrbitControls, CSS2DRenderer) is included in `web/vendor/` (MIT licence) so it works offline.
 
 ## Notes
-- **macOS: do not train XGBoost and PyTorch in the same Python process.** Each bundles its own OpenMP runtime, and the combination segfaults. That is why `06` runs the CNN through `src/run_cnn_all.py` as a separate process (02/03 are already separate).
+- **macOS: do not train XGBoost and PyTorch in the same Python process.** Each bundles its own OpenMP runtime, and the combination segfaults. That is why the tree models (02) and the deep models (03) are in separate notebooks.
 - FD004 sensor s6 reads slightly below the training range in 2 test engines (39 of 126,480 values). This is a single-sensor quirk, not a regime error.
 - Deep models train on CPU (`03` uses CUDA if available, otherwise CPU).
 
@@ -208,11 +186,10 @@ Prepared views via URL: `?fd=FD004&eval=1&engine=10&comp=hpc`, `?engine=85&explo
 - [x] SHAP explainability
 - [x] Failure risk (calibrated)
 - [x] Streamlit dashboard
-- [x] FD002 to FD004 (XGBoost + 1D-CNN)
 - [x] 3D frontend (Three.js)
 - [x] Upload your own engine data (dashboard)
 
-Possible extensions: hyperparameter tuning, LSTM/GRU on FD002-FD004, a bootstrap over test engines for model comparisons.
+Possible extensions: evaluate on FD002 to FD004 (six flight conditions, fan faults), hyperparameter tuning, a bootstrap over test engines for model comparisons.
 
 ## Authors
 - agupta30be24-create

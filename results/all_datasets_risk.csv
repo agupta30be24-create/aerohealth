@@ -1,5 +1,0 @@
-dataset,test engines,truly fail <= 30,HIGH,MEDIUM,LOW,HIGH recall,HIGH precision,fail <= H but LOW,derived HIGH cut-off
-FD001,100,25,24,10,66,23/25,23/24,0,31.6
-FD002,259,61,68,45,146,61/61,61/68,0,35.1
-FD003,100,20,21,19,60,19/20,19/21,0,32.0
-FD004,248,53,46,40,162,43/53,43/46,0,31.5
